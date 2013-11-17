@@ -105,6 +105,7 @@ let rec cj_c imp_c = match imp_c with
 (* Print cJ to Java *)
 
 let fmtp pad = Printf.ksprintf (fun s -> ((String.make pad ' ')^s))
+let pad_str pad str = (String.make pad ' ')^str
 let map = List.map
 let lines = String.concat "\n"
 let commas = String.concat ","
@@ -135,10 +136,11 @@ let rec prt_expr pad  =
       and p2 = prt_expr pad e2
       in if p1 = "" then p2 else (p1^";\n"^p2)
   | Atomic e ->
-      synchronized pad (run (new_thread ~lock:(Id("new Lock()")) e))
-and synchronized pad expr = 
-  fmtp pad "synchronized(this.lock) %s"
-      (curlies (pad+1) (((prt_expr (pad+1) expr))^";"))
+      fmtp pad "synchronized(this.lock) %s"
+      (curlies pad
+        (lines [pad_str (pad+1) "Lock old_lock = this.lock; this.lock = new Lock();"
+               ;((prt_expr (pad+1) e)^";")
+               ;pad_str (pad+1) "this.lock = old_lock;"]))
 
 and prt_decl pad = 
   function
