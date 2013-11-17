@@ -17,15 +17,15 @@ class T extends Thread {
 
 
 class List extends MObject {
-    public List(Lock l) { }
-    public Bool isnil(Lock l) {synchronized (l) {return new Bool(); } }
-    public List find(Lock l, Num n) {synchronized (l) {return new List(l); } }
-    public Num get(Lock l, Num n) {synchronized (l) {return new Num(); } }
-    public void set(Lock l, Num n, Num m) {synchronized (l) {} }
-    public List expand(Lock l, Num n, Num m) {synchronized (l) {return new List(l); } }
-    public Num read(Lock l) {synchronized (l) {return new Num(); } }
-    public void write(Lock l, Num m) {synchronized (l) {} }
-    public Bool isPair(Lock l, Num n, Num m) {synchronized (l) {return new Bool(); } }
+    public List() { }
+    public Bool isnil() {return new Bool();  }
+    public List find(Num n) {return new List();  }
+    public Num get(Num n) {return new Num();  }
+    public void set(Num n, Num m) {} 
+    public List expand(Num n, Num m) {return new List();  }
+    public Num read() {return new Num();  }
+    public void write(Num m) {} 
+    public Bool isPair(Num n, Num m) {return new Bool();  }
     public String repr() {return "<Not a concrete List>"; }
 }
 
@@ -35,22 +35,20 @@ class Pair extends List {
     public Num value;
     public List nxt;
 
-    public Pair(Lock l, Num key, Num value, List nxt) {
-        super(l);
-        synchronized (l) {
-            this.key = key;
-            this.value = value;
-            this.nxt = nxt;
-        }
+    public Pair(Num key, Num value, List nxt) {
+        super();
+        this.key = key;
+        this.value = value;
+        this.nxt = nxt;
     }
 
-    public Bool isnil(Lock l) {synchronized (l) {return new False(); } }
-    public Num read(Lock l) {synchronized (l) {return this.value; } }
-    public void write(Lock l, Num m) {synchronized (l) {this.value = m; } }
-    public List find(Lock l, Num n) {synchronized (l) {return (List) this.key.isequal(n).ite(this, this.nxt.find(l, n)); } }
-    public Num get(Lock l, Num n) {synchronized (l) {return this.find(l, n).read(l); } }
-    public void set(Lock l, Num n, Num m) {synchronized (l) {this.find(l, n).write(l, m); } }
-    public List expand(Lock l, Num n, Num m) {synchronized (l) {return new Pair(l, n, m, this); } }
+    public Bool isnil() {return new False();  }
+    public Num read() {return this.value;  }
+    public void write(Num m) {this.value = m;  }
+    public List find(Num n) {return (List) this.key.isequal(n).ite(this, this.nxt.find(n));  }
+    public Num get(Num n) {return this.find(n).read();  }
+    public void set(Num n, Num m) {this.find(n).write(m);  }
+    public List expand(Num n, Num m) {return new Pair(n, m, this);  }
     public String letter(Num n) {
         String alphabet = "abcdefhijklmnopqrstuvwxyz";
         return Character.toString(alphabet.charAt(n.number()));
@@ -60,10 +58,10 @@ class Pair extends List {
 
 
 class Nil extends List {
-    public Nil(Lock l) { super(l); }
-    public Bool isnil(Lock l) {synchronized (l) {return new True(); } }
-    public List expand(Lock l, Num n, Num m) {synchronized (l) {return new Pair(l, n, m, this); } }
-    public String repr() {return "<nil>"; } }
+    public Nil() { super(); }
+    public Bool isnil() {return new True();  }
+    public List expand(Num n, Num m) {return new Pair(n, m, this);  }
+    public String repr() {return ">"; } }
 
 class Bool extends MObject {
     public Object ite(Object x, Object y) {return new Object(); }
