@@ -47,6 +47,12 @@ let rec exp_of_int i =
 let rec read_store n = MCall ((Id "this.store"), "get", [cj_int n])
 and expand_store id v = MCall ((Id "this.store"),"expand",[id;v])
 and write_store key value = MCall ((Id "this.store"), "set", [key;value])
+(* Default store sets all variables to Zero *)
+and default_store c = 
+  let rec build_store = function
+  | n when n<0 -> []
+  | n -> (n,Imp.Zero)::(build_store (n-1))
+  in build_store ((Imp.new_var c)-1)
 
 and cj_e e = match e with
    Imp.Id(x) -> read_store x
@@ -166,38 +172,37 @@ let rec prt_decls () =
   let rest = if (List.length !decls) > 0 then (prt_decls ()) else "" in
   str^"\n"^rest
 
-let init_store n =
-  let pe n = prt_expr 0 (cj_int n) in
-  let rec aux n =
-    if n < 0 then ""
-    else (".expand("^(pe n)^", "^(pe 0)^")"^(aux (n-1)))
-  in ("new Nil()"^(aux n))
-
-
-(* Dirty work *)
-
+let rec prt_store s = 
+  let rec aux = function
+  | (k,v)::rest -> 
+      fmtp 0 ".expand(%s,%s)%s" 
+        (prt_expr 0 (cj_int k))  (prt_expr 0 (cj_e v)) (aux rest)
+  | [] -> ""
+  in fmtp 0 "new Nil()%s;" (aux s)
 
 let program_name = "Compiled"
 
-let cj_prog p =
-  print_string ((Imp.prt_c p)^"\n"); (* Show Imp for debugging *)
-  let c = Imp.transform p in
-  let store = init_store ((Imp.new_var c)-1) in
-  let first_thread = thread_with_name (thread_name ()) (cj_c c) in
+(* Dirty work *)
+
+let cj_prog c =
+  print_string ((Imp.prt_c c)^"\n"); (* Show Imp for debugging *)
+  let c = Imp.transform c in
+  let store = default_store c in
+  let bootstrap = new_thread ~lock:(Id "new Lock()") ~store:(Id "st") (cj_c c) in
   let f = open_out (program_name^".java") in
   Printf.fprintf f 
     " %s\n public class %s {
     public static void main (String[] a) {
     List st = %s;
-    T t = %s;
     System.out.println(\"Store before: <\" +st.repr());
+    T t = %s;
     t.run();
     System.out.println(\"Store after: <\" + t.store.repr());
     }}"
     (prt_decls ())
     program_name
-    store
-    (prt_expr 0 ((New(first_thread, [(Id "new Lock()"); (Id "st")]))))
+    (prt_store store)
+    (prt_expr 0 bootstrap)
   ; close_out f
 
 let () =
