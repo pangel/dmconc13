@@ -244,12 +244,12 @@ and prt_e e =
 
 and prt_c = 
   let prt = Printf.sprintf in function
-  | Skip -> ""
+  | Skip -> "skip"
   | Assign(x,v) -> prt "%s := %s" (letter x) (prt_e v)
   | Seq (c1,c2) -> prt "%s ; %s" (prt_c c1) (prt_c c2)
   | Ite (b,c1,c2) -> prt "(%s) ? %s : %s" (prt_b b) (prt_c c1) (prt_c c2)
   | While (b,c) -> prt "while %s do { %s }" (prt_b b) (prt_c c)
-  | Var (n,e,c) -> prt "var %s=%s in { %s }" (string_of_int n) (prt_e e) (prt_c c)
+  | Var (n,e,c) -> prt "var %s=%s in { %s }" (letter n) (prt_e e) (prt_c c)
   | Par (c1,c2) -> prt "(%s  |  %s)" (prt_c c1) (prt_c c2)
   | Spawn c -> prt "spawn { %s }" (prt_c c)
   | Await (b,c) -> prt "await %s do { %s }" (prt_b b) (prt_c c)
