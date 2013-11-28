@@ -54,14 +54,14 @@ class Pair extends List {
         return Character.toString(alphabet.charAt(n.number()));
     }
 
-    public String repr() {return "(" + this.letter(this.key) + "," + this.value.number() + ")" + this.nxt.repr(); } }
+    public String repr() {return " " + this.letter(this.key) + ":" + this.value.number() + "" + this.nxt.repr(); } }
 
 
 class Nil extends List {
     public Nil() { super(); }
     public Bool isnil() {return new True();  }
     public List expand(Num n, Num m) {return new Pair(n, m, this);  }
-    public String repr() {return ">"; } }
+    public String repr() {return "."; } }
 
 class Bool extends MObject {
     public Object ite(Object x, Object y) {return new Object(); }

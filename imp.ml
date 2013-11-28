@@ -126,6 +126,16 @@ match e with
 let eval_bool (NotZero(e)) m  = let v = (eval_exp  e m) in 
 match v with Zero -> false | _ -> true ;;
 
+(* Int to cj int conversion *)
+
+let rec exp_of_int i = 
+  if i<0 
+    then failwith "Variable address cannot be negative" 
+    else if i=0 
+      then Zero 
+      else Suc(exp_of_int (i-1))
+
+
 (* Evaluator for atomic execution of commands with no while/await/parallel *)
 
 let rec  eval_com c m = 
@@ -231,6 +241,9 @@ add "c17" (Par(Skip, Await(NotZero(Id(0)), Skip)));;
 
 (* A.H: utility: letter for var. index *)
 let letter n = Char.escaped ("abcdefhijklmnopqrstuvwxyz".[n])
+let num s = String.index "abcdefhijklmnopqrstuvwxyz" s.[0]
+
+(* Pretty-printing Imp *)
 
 let rec prt_b = fun (NotZero e) -> (prt_e e)^" != 0"
 

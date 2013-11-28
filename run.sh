@@ -1,30 +1,9 @@
-tools="javac tools.java"
-compiler="ocamlc imp.ml cj.ml -o cj_compiler"
-compile_imp="./cj_compiler $1"
-compile_java="javac Compiled.java"
-run_java="java Compiled"
+step() {
+  echo $1 && echo $2 && eval $2 && echo
+}
 
-echo "Tools" &&
-echo $tools &&
-eval $tools &&
-echo &&
-
-echo "Compiler" &&
-echo $compiler &&
-eval $compiler &&
-echo &&
-
-echo "Compile Imp" &&
-echo "$compile_imp" &&
-eval $compile_imp &&
-echo &&
-
-echo "Compile Java" &&
-echo $compile_java &&
-eval $compile_java &&
-echo &&
-
-echo "Run Java" &&
-echo $run_java &&
-echo &&
-eval $run_java
+step "Tools" "javac tools.java" &&
+step "Compiler" "ocamlc str.cma imp.ml cj.ml -o cj_compiler" &&
+step "Compile Imp" "./cj_compiler $1 ${2+\"$2\"}" &&
+step "Compile Java" "javac Compiled.java" &&
+step "Run Java"  "java Compiled"

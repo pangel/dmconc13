@@ -37,13 +37,6 @@ let new_thread ?(store=Id("this.store")) ?(lock=Id("this.lock")) e = New(thread 
 
 (* Compile Imp to cJ *)
 
-let rec exp_of_int i = 
-  if i<0 
-    then failwith "Variable address cannot be negative" 
-    else if i=0 
-      then Imp.Zero 
-      else Imp.Suc(exp_of_int (i-1))
-
 let rec read_store n = MCall ((Id "this.store"), "get", [cj_int n])
 and expand_store id v = MCall ((Id "this.store"),"expand",[id;v])
 and write_store key value = MCall ((Id "this.store"), "set", [key;value])
@@ -53,6 +46,9 @@ and default_store c =
   | n when n<0 -> []
   | n -> (n,Imp.Zero)::(build_store (n-1))
   in build_store ((Imp.new_var c)-1)
+and patch_store s = function
+  | (k,v)::patch -> patch_store (Imp.update s k v) patch
+  | [] -> s
 
 and cj_e e = match e with
    Imp.Id(x) -> read_store x
@@ -60,12 +56,12 @@ and cj_e e = match e with
  | Imp.Suc(e) -> MCall(cj_e e, "succ", [])
  | Imp.Dec(e) ->  MCall(cj_e e, "pred", [])
 
-and cj_int n = cj_e (exp_of_int n)
+and cj_int n = cj_e (Imp.exp_of_int n)
 
 let cj_b (Imp.NotZero(e)) = MCall(cj_e e, "notzero", [])
 
 let noop = Id "new T()"
-let this = Id("this")
+let this = Id "this"
 let ite b e1 e2 = MCall(cj_b b, "ite", [e1; e2])
 let run e = MCall(e, "run", [])
 let start e = MCall(e, "start", [])
@@ -180,24 +176,46 @@ let rec prt_store s =
   | [] -> ""
   in fmtp 0 "new Nil()%s;" (aux s)
 
+module Parser : sig 
+    val parse_patch : string -> (int * Imp.exp) list
+  end = struct
+    (* From ["b";"3"] to [(1,3)] *)
+    let rec pairs = function
+      | k::v::xs -> 
+          let ki = Imp.num k 
+          and ve = Imp.exp_of_int (int_of_string v) 
+          in (ki,ve)::(pairs xs)
+      | [] -> []
+      | _ -> failwith "pairs must get an even list as input"
+
+    let format = Str.regexp "^\\([a-z]:[0-9]+ ?\\)*$"
+    let delims = Str.regexp ":\\| "
+
+    let parse_patch p =
+      if Str.string_match format p 0 
+      then pairs (Str.split delims p)
+      else failwith ("Invalid store specifier string. "^
+                     "Format is space-separated list of name:value pairs, e.g.  a:3 c:0")
+end
+
 let program_name = "Compiled"
 
 (* Dirty work *)
 
-let cj_prog c =
+let cj_prog c patch_s =
   print_string ((Imp.prt_c c)^"\n"); (* Show Imp for debugging *)
   let c = Imp.transform c in
-  let store = default_store c in
+  let store = patch_store (default_store c) (Parser.parse_patch patch_s) in
   let bootstrap = new_thread ~lock:(Id "new Lock()") ~store:(Id "st") (cj_c c) in
   let f = open_out (program_name^".java") in
   Printf.fprintf f 
     " %s\n public class %s {
     public static void main (String[] a) {
     List st = %s;
-    System.out.println(\"Store before: <\" +st.repr());
+    System.out.println(\"Store before:\" +st.repr());
     T t = %s;
     t.run();
-    System.out.println(\"Store after: <\" + t.store.repr());
+    System.out.println(\"Store  after:\" + t.store.repr());
     }}"
     (prt_decls ())
     program_name
@@ -207,7 +225,9 @@ let cj_prog c =
 
 let () =
   if (Array.length Sys.argv) < 2 then begin
-    print_string "Give me an Imp program to compile. e.g. c5. Look in imp.ml\n";
+    print_string "Give me an Imp program to compile. e.g. c5. Look in imp.ml
+    Optionally, specify a store with a space-separated list of name:value, e.g.  a:3 c:0";
     exit 1 end
   else
-    cj_prog (Imp.get Sys.argv.(1))
+    let patch_s = if (Array.length Sys.argv < 3) then "" else Sys.argv.(2) in
+    cj_prog (Imp.get Sys.argv.(1)) patch_s
